@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+This page was created by Wayne Orwig, to be opened on a tablet or such, to display photos
+and to parse data from a file containing weather that was pulled from the Ambient Weather site.
+The photos and data are created by scripts running on a Raspberry PI.
+
+Updated: 2/7/2020
+-->
+
+<html>
+<head>
+	<meta http-equiv="refresh" content="61">
+	<title></title>
+</head>
+
+<style>
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #000030;
+  color:#FFFFB0;
+  --table-border-color: yellow;
+}
+
+th {
+  font:34pt Arial bold;
+  text-align: center;
+}
+
+td {
+  font:12pt Arial;
+  text-align: right;
+  font-style:italic;
+}
+
+small {
+  font-size: smaller;
+}
+</style>
+
+<!-- the RCA android tablet is 600px height using the 'fully kiosk browser' which limits the space available -->
+
+<body>  
+
+<div style="height: inherit; width: 75%; float: left; background-color: #000000; background-image: url('Photo.jpg');background-position: center; background-repeat: no-repeat; background-size: contain">  </div>
+
+
+<div style="height: inherit; width: 24.8%; float: right;  text-align: center; background-image: url('https://radar.weather.gov/ridge/Thumbs/FFC.png');background-position: bottom; background-repeat: no-repeat; background-size: 85% auto;">
+
+<div style="font:46pt Arial bold" id="clockbox"></div>
+
+<table style="width: 100%; border-collapse: collapse; border: 1px dotted var(--table-border-color);">
+ <tr">
+  <th style="border-right: 1px dotted var(--table-border-color);"><div id="tempf"></div></th>
+  <th><div id="tempinf"></div></th>
+ </tr>
+ <tr>
+  <td style="text-align: center; border-right: 1px dotted var(--table-border-color);"><div id="outf"></div></td>
+  <td style="text-align: center;"><div id="inf"></div></td>
+ </tr>
+ <tr>
+  <th style=" border-right: 1px dotted var(--table-border-color);  border-bottom: 1px dotted var(--table-border-color);"><small><div id="humidity"></div></small></th>
+  <th style="border-bottom: 1px dotted var(--table-border-color);"><small><div id="humidityin"></div></small></th>
+ </tr>
+ <tr>
+  <td style="border-bottom: 1px dotted var(--table-border-color);"><div id="baromrate"></td>
+  <th style="border-bottom: 1px dotted var(--table-border-color);"><div id="baromrelin"></div></th>
+ </tr>
+ <tr>
+  <td style="border-bottom: 1px dotted var(--table-border-color);"><div id="windspdmsg"></div></td>
+  <th style="border-bottom: 1px dotted var(--table-border-color);"><div id="windspdmph_avg10m"></div></th>
+ </tr>
+ <tr>
+  <td><div id="rainmsg"></div></td>
+  <th><div id="dailyrainin"></div></th>
+ </tr>
+</table>
+
+<div style="text-align:center; font:8pt Arial;" id="eventrainin"></div>
+<div style="text-align:center; font:8pt Arial;" id="dateTime"></div>
+
+</div>
+
+<script type="text/javascript">
+
+var xmlhttp1 = new XMLHttpRequest();
+xmlhttp1.onreadystatechange = function() {
+  if (this.readyState == 4 && this.status == 200) {
+    var myObj = JSON.parse(this.responseText);
+    pastbarometer = myObj[0].lastData.baromrelin;
+    pastwindavg = myObj[0].lastData.windspdmph_avg10m
+    pasttempinf = myObj[0].lastData.tempinf;
+    pasttempf = myObj[0].lastData.tempf;
+  }
+};
+/*
+I often see a daily temperature change of maybe 20F (over 12 hours), or 1.7F per hour.
+In one close to normal example it is 41F @ 8am and 61F @ 2pm. Or 20F over 6 hours, or 3.33F per hour.
+Today a cold front, went 67.5F @ 10.05 to 61.5F @ 10:50. Or -8F per hour.
+*/
+function setarrow(diff)
+{
+  var code = " ";
+
+  if (diff > 2)
+  {
+    if (diff > 5) code = "&uArr;";
+    else code = "&uarr;";
+  }
+  else if (diff < -2)
+  {
+    if (diff < -5) code = "&dArr;";
+    else code = "&darr;";
+  }
+  else
+  {
+    code = " ";
+  }
+  return(code);
+};
+
+var xmlhttp2 = new XMLHttpRequest();
+xmlhttp2.onreadystatechange = function() {
+  if (this.readyState == 4 && this.status == 200) {
+    var arrow, perhr;
+    var myObj = JSON.parse(this.responseText);
+    perhr = myObj[0].lastData.tempinf - pasttempinf;    
+    arrow = setarrow(perhr);
+    document.getElementById("tempinf").innerHTML = myObj[0].lastData.tempinf+"&deg"+arrow;
+    document.getElementById("inf").innerHTML = "IN rate: "+perhr.toFixed(1)+"&deg";
+    document.getElementById("humidityin").innerHTML = myObj[0].lastData.humidityin+"%";
+    perhr = myObj[0].lastData.tempf - pasttempf;    
+    arrow = setarrow(perhr);
+    document.getElementById("tempf").innerHTML = myObj[0].lastData.tempf+"&deg"+arrow;
+    document.getElementById("outf").innerHTML = "OUT rate: "+perhr.toFixed(1)+"&deg";
+    document.getElementById("humidity").innerHTML = myObj[0].lastData.humidity+"%";
+    perhr = myObj[0].lastData.baromrelin - pastbarometer;
+    document.getElementById("baromrate").innerHTML = "Barometer:<br>Rate: "+perhr.toFixed(2);
+    arrow = setarrow(perhr * 90); /* one site implies 0.06inHg per hour change is above normal */
+    document.getElementById("baromrelin").innerHTML = myObj[0].lastData.baromrelin.toFixed(2)+arrow;
+    document.getElementById("windspdmsg").innerHTML = "WIND AVG:<br>Gust: "+myObj[0].lastData.windgustmph+"&nbsp&nbsp";
+    document.getElementById("windspdmph_avg10m").innerHTML = myObj[0].lastData.windspdmph_avg10m;
+    document.getElementById("rainmsg").innerHTML = "DAILY RAIN:<br>Event: "+myObj[0].lastData.eventrainin.toFixed(2)+"&nbsp";
+    document.getElementById("dailyrainin").innerHTML = myObj[0].lastData.dailyrainin.toFixed(2);
+
+    document.getElementById("dateTime").innerHTML = "as of: "+myObj[0].lastData.date;
+  }
+};
+
+var pastbarometer = 0, pastwindavg; pasttempinf=0, pasttempf=0;
+
+xmlhttp1.open("GET", "ambient2.json", false); /* get the past data */
+xmlhttp1.send();
+
+xmlhttp2.open("GET", "ambient.json", false);  /* get the latest data */
+xmlhttp2.send();
+
+function GetClock(){
+var d=new Date();
+var nhour=d.getHours(),nmin=d.getMinutes(),nsec=d.getSeconds(),ap;
+
+if(nhour==0){ap=" am";nhour=12;}
+else if(nhour<12){ap=" am";}
+else if(nhour==12){ap=" pm";}
+else if(nhour>12){ap=" pm";nhour-=12;}
+
+if(nmin<=9) nmin="0"+nmin;
+if(nsec<=9) nsec="0"+nsec;
+
+var clocktext=""+nhour+":"+nmin+":"+nsec+"";
+document.getElementById('clockbox').innerHTML=clocktext;
+}
+
+GetClock();
+setInterval(GetClock,1000);
+</script>
+
+
+</body>
+</html>
